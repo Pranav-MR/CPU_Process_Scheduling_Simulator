@@ -207,10 +207,55 @@ function collectInputs() {
   return { algorithm, quantum: isNaN(quantum) ? 2 : quantum, processes };
 }
 
-// --- Run Simulation Request with Realistic Execution Animation ---
+// --- Calculate Dynamic Simulation Delay Based on Workload Complexity ---
+function calculateSimulationProfile(payload) {
+  const n = payload.processes.length;
+  const totalBurst = payload.processes.reduce((acc, p) => acc + (p.burst || 0), 0);
+
+  // Base duration: 500ms for simple, small inputs
+  let totalDelay = 500;
+
+  // Scale with number of processes (+50ms per process)
+  totalDelay += n * 50;
+
+  let algoLabel = payload.algorithm;
+  let complexityLabel = 'Low';
+
+  if (payload.algorithm === 'SJF') {
+    totalDelay += 180;
+    complexityLabel = n > 4 ? 'Moderate' : 'Low';
+  } else if (payload.algorithm === 'RR') {
+    const slices = Math.min(totalBurst / (payload.quantum || 2), 25);
+    totalDelay += 240 + Math.round(slices * 16);
+    complexityLabel = slices > 8 || n > 5 ? 'High' : 'Moderate';
+  } else if (payload.algorithm === 'ALL') {
+    totalDelay += 480;
+    complexityLabel = n > 4 ? 'High' : 'Moderate';
+    algoLabel = 'FCFS, SJF & Round Robin';
+  }
+
+  // Natural subtle variation (+/- 40ms)
+  totalDelay += Math.floor(Math.random() * 80) - 40;
+
+  // Enforce realistic bounds:
+  // - Minimum 600ms for simple/small datasets
+  // - Maximum 2100ms for large/complex datasets
+  totalDelay = Math.max(600, Math.min(totalDelay, 2100));
+
+  // Split into progressive phases
+  const stage1 = Math.round(totalDelay * 0.35);
+  const stage2 = Math.round(totalDelay * 0.45);
+  const stage3 = Math.max(100, totalDelay - stage1 - stage2);
+
+  return { totalDelay, stage1, stage2, stage3, complexityLabel, algoLabel };
+}
+
+// --- Run Simulation Request with Adaptive Workload Timing ---
 simulateBtn.addEventListener('click', async () => {
   const payload = collectInputs();
   if (!payload) return;
+
+  const profile = calculateSimulationProfile(payload);
 
   simulateBtn.disabled = true;
   simulateBtn.innerHTML = `
@@ -225,7 +270,7 @@ simulateBtn.addEventListener('click', async () => {
 
   loadingProgressBar.style.width = '20%';
   loadingStatusTitle.textContent = 'Invoking C Backend...';
-  loadingStatusDesc.textContent = `Piping ${payload.processes.length} processes to scheduler.exe`;
+  loadingStatusDesc.textContent = `Piping ${payload.processes.length} processes to scheduler.exe [Workload: ${profile.complexityLabel}]`;
 
   // Smooth scroll to output
   document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
@@ -240,21 +285,23 @@ simulateBtn.addEventListener('click', async () => {
       body: JSON.stringify(payload)
     });
 
-    await sleep(400);
-    loadingProgressBar.style.width = '60%';
-    const algoName = payload.algorithm === 'ALL' ? 'FCFS, SJF & Round Robin' : payload.algorithm;
-    loadingStatusTitle.textContent = `Running ${algoName}...`;
-    loadingStatusDesc.textContent = 'Allocating memory, updating ready queues, computing timeline...';
+    // Stage 1 delay
+    await sleep(profile.stage1);
+    loadingProgressBar.style.width = '65%';
+    loadingStatusTitle.textContent = `Executing ${profile.algoLabel}...`;
+    loadingStatusDesc.textContent = `Processing scheduling queues (${payload.processes.length} processes, ~${profile.totalDelay}ms compute window)...`;
 
+    // Stage 2 delay in sync with backend response
     const [response] = await Promise.all([
       fetchPromise,
-      sleep(450) // Deliberate realistic processing buffer (~850ms total)
+      sleep(profile.stage2)
     ]);
 
-    loadingProgressBar.style.width = '95%';
+    // Stage 3: Render preparation
+    loadingProgressBar.style.width = '98%';
     loadingStatusTitle.textContent = 'Formatting Output...';
-    loadingStatusDesc.textContent = 'Generating Gantt chart coordinates and metrics...';
-    await sleep(250);
+    loadingStatusDesc.textContent = 'Constructing Gantt timeline and calculating average TAT & WT...';
+    await sleep(profile.stage3);
 
     const data = await response.json();
 
