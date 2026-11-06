@@ -23,6 +23,7 @@ typedef struct {
     char id[16];
     int start_time;
     int end_time;
+    
 } GanttBlock;
 
 // Circular Queue for Round Robin
