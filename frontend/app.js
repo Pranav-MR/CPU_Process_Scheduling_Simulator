@@ -57,6 +57,10 @@ const algoCards = document.querySelectorAll('.algo-card');
 
 const resultsPlaceholder = document.getElementById('results-placeholder');
 const resultsDisplay = document.getElementById('results-display');
+const resultsLoading = document.getElementById('results-loading');
+const loadingStatusTitle = document.getElementById('loading-status-title');
+const loadingStatusDesc = document.getElementById('loading-status-desc');
+const loadingProgressBar = document.getElementById('loading-progress-bar');
 const comparisonView = document.getElementById('comparison-view');
 
 // --- Helper: Render Process Rows ---
@@ -203,23 +207,54 @@ function collectInputs() {
   return { algorithm, quantum: isNaN(quantum) ? 2 : quantum, processes };
 }
 
-// --- Run Simulation Request ---
+// --- Run Simulation Request with Realistic Execution Animation ---
 simulateBtn.addEventListener('click', async () => {
   const payload = collectInputs();
   if (!payload) return;
 
   simulateBtn.disabled = true;
   simulateBtn.innerHTML = `
-    <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg>
+    <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-linecap="round"></path></svg>
     Simulating with C Backend...
   `;
 
+  // Display simulated execution state
+  resultsPlaceholder.classList.add('hidden');
+  resultsDisplay.classList.add('hidden');
+  resultsLoading.classList.remove('hidden');
+
+  loadingProgressBar.style.width = '20%';
+  loadingStatusTitle.textContent = 'Invoking C Backend...';
+  loadingStatusDesc.textContent = `Piping ${payload.processes.length} processes to scheduler.exe`;
+
+  // Smooth scroll to output
+  document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
   try {
-    const response = await fetch('/api/simulate', {
+    // Step 1: Initiating request
+    const fetchPromise = fetch('/api/simulate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
+
+    await sleep(400);
+    loadingProgressBar.style.width = '60%';
+    const algoName = payload.algorithm === 'ALL' ? 'FCFS, SJF & Round Robin' : payload.algorithm;
+    loadingStatusTitle.textContent = `Running ${algoName}...`;
+    loadingStatusDesc.textContent = 'Allocating memory, updating ready queues, computing timeline...';
+
+    const [response] = await Promise.all([
+      fetchPromise,
+      sleep(450) // Deliberate realistic processing buffer (~850ms total)
+    ]);
+
+    loadingProgressBar.style.width = '95%';
+    loadingStatusTitle.textContent = 'Formatting Output...';
+    loadingStatusDesc.textContent = 'Generating Gantt chart coordinates and metrics...';
+    await sleep(250);
 
     const data = await response.json();
 
@@ -229,6 +264,8 @@ simulateBtn.addEventListener('click', async () => {
 
     renderResults(payload.algorithm, data);
   } catch (err) {
+    resultsLoading.classList.add('hidden');
+    resultsPlaceholder.classList.remove('hidden');
     showError(err.message);
   } finally {
     simulateBtn.disabled = false;
@@ -241,6 +278,7 @@ simulateBtn.addEventListener('click', async () => {
 
 // --- Render Results & Gantt Chart ---
 function renderResults(algorithm, data) {
+  resultsLoading.classList.add('hidden');
   resultsPlaceholder.classList.add('hidden');
   resultsDisplay.classList.remove('hidden');
 
@@ -253,9 +291,6 @@ function renderResults(algorithm, data) {
     comparisonView.classList.add('hidden');
     displaySingleSchedule(data);
   }
-
-  // Smooth scroll to output
-  document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
 }
 
 function displaySingleSchedule(res) {

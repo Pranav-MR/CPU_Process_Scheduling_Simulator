@@ -151,6 +151,16 @@
           <p>Configure processes and click <strong>Run Simulation</strong> to compute the schedule using the C backend.</p>
         </div>
 
+        <!-- Animated Loading State during simulation -->
+        <div id="results-loading" class="results-loading hidden">
+          <div class="loader-spinner"></div>
+          <h3 id="loading-status-title">Executing C Scheduler...</h3>
+          <p id="loading-status-desc" class="loading-desc">Invoking compiled C Data Structures engine (scheduler.exe)...</p>
+          <div class="loading-progress-track">
+            <div id="loading-progress-bar" class="loading-progress-bar"></div>
+          </div>
+        </div>
+
         <!-- Results Content Container -->
         <div id="results-display" class="results-display hidden">
           <!-- Summary Metrics Cards -->
