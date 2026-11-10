@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CPU Process Scheduling Simulator - Presentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --primary: #6366f1;
+      --cyan: #06b6d4;
+      --green: #10b981;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    /* Presentation Stage */
+    .slide-stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .slide {
+      display: none;
+      width: 100%;
+      max-width: 1180px;
+      height: 640px;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 2.75rem;
+      position: relative;
+      flex-direction: column;
+      box-shadow: 0 20px 40px -15px rgba(0,0,0,0.7);
+    }
+    .slide.active { display: flex; animation: fadeIn 0.25s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .category-badge {
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--cyan);
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+    .slide h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 1.5rem;
+    }
+    .slide-body {
+      flex: 1;
+      display: grid;
+      gap: 1.5rem;
+    }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+    .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .card h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--cyan);
+    }
+    .card p, .card li {
+      font-size: 0.92rem;
+      color: var(--text);
+      line-height: 1.55;
+    }
+    .card ul {
+      padding-left: 1.25rem;
+    }
+    .code-box {
+      background: #090d16;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 0.65rem 0.85rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--cyan);
+    }
+
+    /* Title Slide Specific */
+    .title-slide {
+      justify-content: center;
+      text-align: left;
+    }
+    .title-accent-bar {
+      width: 70px;
+      height: 5px;
+      background: var(--primary);
+      border-radius: 4px;
+      margin-bottom: 1.25rem;
+    }
+    .title-slide h1 {
+      font-size: 2.85rem;
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 0.85rem;
+    }
+    .title-sub {
+      font-size: 1.15rem;
+      color: var(--muted);
+      margin-bottom: 2rem;
+    }
+    .speakers-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .speaker-pill {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+    .speaker-pill h4 {
+      font-size: 0.85rem;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.25rem;
+    }
+    .speaker-pill p {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* Table styling */
+    .pres-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+    }
+    .pres-table th, .pres-table td {
+      padding: 0.65rem 0.85rem;
+      text-align: left;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .pres-table th { color: var(--cyan); }
+    .optimal-badge {
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    /* Bottom Nav Bar */
+    .nav-bar {
+      height: 64px;
+      background: #0f172a;
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2.5rem;
+    }
+    .nav-left {
+      font-size: 0.85rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .nav-center {
+      display: flex;
+      gap: 0.75rem;
+    }
+    .nav-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: #fff;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 0.85rem;
+      padding: 0.45rem 1.15rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .nav-btn:hover { background: #334155; }
+    .nav-btn.primary { background: var(--primary); border-color: var(--primary); }
+    .nav-btn.primary:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+
+  <div class="slide-stage">
+
+    <!-- SLIDE 1 -->
+    <div class="slide title-slide active" data-index="1">
+      <div class="title-accent-bar"></div>
+      <div class="category-badge">DATA STRUCTURES &amp; OPERATING SYSTEMS PROJECT</div>
+      <h1>CPU Process Scheduling<br>Simulator</h1>
+      <p class="title-sub">Interactive visualization &amp; performance benchmark powered by pure C Data Structures.</p>
+      
+      <div class="speakers-row">
+        <div class="speaker-pill">
+          <h4>Speaker 1 (Lead)</h4>
+          <p><strong>Working Background &amp; Architecture</strong></p>
+          <p>C Data Structures, Queue design, and Execution Guide (CLI + UI)</p>
+        </div>
+        <div class="speaker-pill">
+          <h4>Speaker 2</h4>
+          <p><strong>Algorithm Mechanics</strong></p>
+          <p>FCFS, Non-Preemptive SJF, and Round Robin scheduling logic</p>
+        </div>
+        <div class="speaker-pill">
+          <h4>Speaker 3</h4>
+          <p><strong>Metrics &amp; Defense</strong></p>
+          <p>Gantt charts, formulas, performance analysis, and Viva defense</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 2 -->
+    <div class="slide" data-index="2">
+      <div class="category-badge">SPEAKER 1: PROJECT OVERVIEW</div>
+      <h2>Project Objectives &amp; Real-World Relevance</h2>
+      <div class="slide-body grid-2">
+        <div class="card">
+          <h3>The Core Problem</h3>
+          <p>The CPU is the most vital system resource. Learning CPU scheduling solely from textbook formulas makes it difficult to visualize queue flows, preemptions, and idle gaps.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--primary);">Pure C Data Structures</h3>
+          <p>Implemented all core algorithms using standard C structures, arrays, and queues without relying on heavy external libraries.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--green);">Dual Execution Environments</h3>
+          <p>Built two versions: a <strong>standalone C terminal CLI</strong> for code inspection and lab viva, plus a <strong>modern Web UI</strong> for dynamic visualization.</p>
+        </div>
+        <div class="card">
+          <h3>Accurate Real-Time Metrics</h3>
+          <p>Calculates Completion Time ($CT$), Turnaround Time ($TAT$), Waiting Time ($WT$), and explicitly detects CPU **IDLE** states when no processes are ready.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3 -->
+    <div class="slide" data-index="3">
+      <div class="category-badge">SPEAKER 1: WORKING BACKGROUND</div>
+      <h2>Under the Hood: C Data Structures Design</h2>
+      <div class="slide-body grid-3">
+        <div class="card">
+          <h3>1. struct Process</h3>
+          <p>Stores process state and lifecycle metrics:</p>
+          <ul>
+            <li><code>id[10]</code>: Process identifier</li>
+            <li><code>at, bt</code>: Arrival &amp; Burst times</li>
+            <li><code>ct, tat, wt</code>: Computed outputs</li>
+            <li><code>rem_bt</code>: Remaining burst (RR)</li>
+            <li><code>completed</code>: Finished flag</li>
+          </ul>
+        </div>
+        <div class="card" style="border-color: var(--primary);">
+          <h3 style="color: var(--primary);">2. FIFO Queue DS</h3>
+          <p>Circular/Array Queue for Round Robin:</p>
+          <ul>
+            <li><code>int queue[500]</code> array</li>
+            <li><code>push()</code> and <code>pop()</code></li>
+            <li><code>isQueueEmpty()</code> check</li>
+            <li>Guarantees strict, fair circular ordering in $O(1)$ operations</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--green);">3. struct Gantt</h3>
+          <p>Tracks exact execution intervals:</p>
+          <ul>
+            <li><code>id[10]</code>: PID or "IDLE"</li>
+            <li><code>start, end</code>: Timeline bounds</li>
+            <li>Merges consecutive runs and handles gaps where CPU is waiting for arrivals</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4 -->
+    <div class="slide" data-index="4">
+      <div class="category-badge">SPEAKER 1: LIVE DEMO GUIDE</div>
+      <h2>Program Execution Guide: Terminal CLI &amp; Web UI</h2>
+      <div class="slide-body grid-2">
+        <div class="card">
+          <h3>Option A: Standalone C Terminal (cli_scheduler.c)</h3>
+          <p>Zero dependencies, pure standard C for viva evaluation.</p>
+          <div class="code-box">
+            gcc -Wall -O2 cli_scheduler.c -o cli_scheduler.exe<br>
+            .\cli_scheduler.exe
+          </div>
+          <ul>
+            <li>Interactive numbered menu (Options 1–6)</li>
+            <li>Manual process entry or sample presets</li>
+            <li>ASCII Gantt chart with completion tables in terminal</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--green);">Option B: Interactive Web Simulator (server.py)</h3>
+          <p>Dynamic visualizer connected to C backend via Python bridge.</p>
+          <div class="code-box">
+            python server.py<br>
+            Open browser: http://localhost:5000
+          </div>
+          <ul>
+            <li>Dynamic process rows, presets, and time quantum</li>
+            <li>Color-coded Gantt chart timeline with idle blocks</li>
+            <li>"Compare All" side-by-side benchmark with bar charts</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5 -->
+    <div class="slide" data-index="5">
+      <div class="category-badge">SPEAKER 2: ALGORITHM LOGIC</div>
+      <h2>Algorithm 1: First Come First Serve (FCFS)</h2>
+      <div class="slide-body grid-2">
+        <div class="card">
+          <h3>Implementation Logic in C</h3>
+          <ul>
+            <li><strong>Type:</strong> Non-Preemptive</li>
+            <li><strong>Policy:</strong> Strict FIFO arrival order</li>
+            <li>Sorts processes ascending by arrival time (<code>at</code>).</li>
+            <li>Advances clock; logs <code>IDLE</code> block if <code>current_time &lt; at</code>.</li>
+            <li>Runs job to completion: <code>current_time += bt</code>.</li>
+            <li>Records $CT$, $TAT = CT - AT$, and $WT = TAT - BT$.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--primary);">Analysis: The Convoy Effect</h3>
+          <p><strong>Advantage:</strong> Simplest scheduling logic, zero context switching overhead.</p>
+          <p><strong>Major Drawback:</strong> If a CPU-heavy process arrives first (e.g., Burst = 20), all subsequent short jobs (e.g., Burst = 2) must wait in line.</p>
+          <p><strong>Result:</strong> Inflated average waiting time.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6 -->
+    <div class="slide" data-index="6">
+      <div class="category-badge">SPEAKER 2: ALGORITHM LOGIC</div>
+      <h2>Algorithm 2: Shortest Job First (Non-Preemptive SJF)</h2>
+      <div class="slide-body grid-2">
+        <div class="card">
+          <h3 style="color: var(--green);">Selection Logic in C</h3>
+          <ul>
+            <li><strong>Type:</strong> Non-Preemptive</li>
+            <li><strong>Policy:</strong> Select process with smallest Burst Time among arrived jobs.</li>
+            <li>At <code>current_time</code>, scans all uncompleted jobs where <code>at &lt;= current_time</code>.</li>
+            <li>Picks the minimum <code>bt</code>.</li>
+            <li>If ready queue is empty, advances clock to earliest future arrival (CPU IDLE).</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Evaluation &amp; Trade-offs</h3>
+          <p><strong>Provable Optimality:</strong> SJF yields the absolute minimum average waiting time for any fixed set of processes.</p>
+          <p><strong>Limitation in Real Operating Systems:</strong></p>
+          <ul>
+            <li>The OS cannot predict the exact future burst time of an unknown process before running it.</li>
+            <li>Long processes may starve if short processes keep arriving.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7 -->
+    <div class="slide" data-index="7">
+      <div class="category-badge">SPEAKER 2: ALGORITHM LOGIC</div>
+      <h2>Algorithm 3: Round Robin (RR) with Queue DS</h2>
+      <div class="slide-body grid-2">
+        <div class="card">
+          <h3>Preemptive Queue Execution</h3>
+          <ul>
+            <li><strong>Type:</strong> Preemptive, Time-Sharing</li>
+            <li><strong>Time Quantum ($q$):</strong> Maximum continuous CPU slice allocated.</li>
+            <li>Pushes arrived processes into FIFO <code>queue[]</code>.</li>
+            <li>Pops front process, executes for $\min(q, \text{rem\_bt})$.</li>
+            <li>Enqueues newly arrived processes during this slice.</li>
+            <li>If $\text{rem\_bt} > 0$, re-enqueues back to rear.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--green);">Impact of Time Quantum ($q$)</h3>
+          <p><strong>If Quantum is very large ($q \ge \max(BT)$):</strong><br>Round Robin degenerates into simple FCFS.</p>
+          <p><strong>If Quantum is very small ($q = 1$ unit):</strong><br>Frequent context switches cause severe CPU overhead.</p>
+          <p><strong>Rule of Thumb:</strong> About 80% of CPU bursts should be shorter than the time quantum.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 8 -->
+    <div class="slide" data-index="8">
+      <div class="category-badge">SPEAKER 3: METRICS &amp; FORMULAS</div>
+      <h2>Visualization &amp; Performance Evaluation Metrics</h2>
+      <div class="slide-body grid-2">
+        <div class="card">
+          <h3>Formulas Implemented in Code</h3>
+          <ul>
+            <li><strong>Turnaround Time (TAT):</strong> $TAT = CT - AT$<br><small style="color:var(--muted);">Total time process stays in system</small></li>
+            <li><strong>Waiting Time (WT):</strong> $WT = TAT - BT$<br><small style="color:var(--muted);">Time spent waiting in ready queue</small></li>
+            <li><strong>Average TAT:</strong> $\overline{TAT} = \frac{\sum TAT}{n}$</li>
+            <li><strong>Average WT:</strong> $\overline{WT} = \frac{\sum WT}{n}$</li>
+            <li><strong>CPU Utilization:</strong> $\frac{\text{Busy Time}}{\text{Total Time}} \times 100\%$</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--primary);">Gantt Chart Representation</h3>
+          <p><strong>Visual Timeline:</strong> Maps process execution slices sequentially along with exact start and end boundary timestamps.</p>
+          <p><strong>Idle State Tracking:</strong> Gaps between process completions and new arrivals are explicitly rendered as <code>IDLE</code> blocks.</p>
+          <p><strong>Dual Display:</strong> ASCII diagram in CLI terminal &amp; responsive colored bars in Web UI.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 9 -->
+    <div class="slide" data-index="9">
+      <div class="category-badge">SPEAKER 3: PERFORMANCE COMPARISON</div>
+      <h2>Comparative Benchmark on Standard Workload</h2>
+      <div class="slide-body" style="grid-template-rows: auto 1fr;">
+        <div class="card" style="padding: 1rem 1.5rem;">
+          <table class="pres-table">
+            <thead>
+              <tr>
+                <th>Algorithm</th>
+                <th>Avg Waiting Time</th>
+                <th>Avg Turnaround</th>
+                <th>Evaluation Summary</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1. FCFS</td>
+                <td>5.75 ms</td>
+                <td>11.25 ms</td>
+                <td>Simple FIFO, suffers from Convoy Effect</td>
+              </tr>
+              <tr>
+                <td>2. SJF (Non-Preemptive)</td>
+                <td class="optimal-badge">5.25 ms</td>
+                <td class="optimal-badge">10.75 ms</td>
+                <td class="optimal-badge">&#10004; OPTIMAL (Lowest Waiting Time)</td>
+              </tr>
+              <tr>
+                <td>3. Round Robin (q=2)</td>
+                <td>9.75 ms</td>
+                <td>15.25 ms</td>
+                <td>Highest fairness &amp; response, context switch overhead</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="slide-body grid-2">
+          <div class="card">
+            <h3 style="color: var(--green);">Why SJF Won on Average WT</h3>
+            <p>By scheduling P2 (Burst 3) immediately after P1, the waiting queue delay for remaining jobs was minimized, confirming theoretical optimality.</p>
+          </div>
+          <div class="card">
+            <h3 style="color: var(--primary);">Round Robin's Practical Value</h3>
+            <p>Though RR has higher average turnaround, every process gets immediate CPU attention, making it the bedrock of interactive time-sharing systems.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 10 -->
+    <div class="slide" data-index="10">
+      <div class="category-badge">CONCLUSION &amp; VIVA DEFENSE</div>
+      <h2>Summary, Key Learnings &amp; Viva Q&amp;A</h2>
+      <div class="slide-body grid-2">
+        <div class="card">
+          <h3>Project Achievements</h3>
+          <ul>
+            <li>Solved OS scheduling problems using fundamental C structures and queues.</li>
+            <li>Built both a lightweight terminal CLI and a web visualizer.</li>
+            <li>Handled complex real-world edge cases: CPU idle intervals, simultaneous arrivals, and dynamic time slices.</li>
+          </ul>
+        </div>
+        <div class="card" style="border-color: var(--green);">
+          <h3 style="color: var(--green);">Viva Defense Preparation</h3>
+          <p><strong>Q: Why use a Queue for Round Robin?</strong><br>
+          <small style="color: var(--muted);">A: Ensures fair FIFO cycling: process executes for quantum $q$ and re-enters the rear in $O(1)$ time.</small></p>
+          <p><strong>Q: Why isn't SJF used in Windows or Linux?</strong><br>
+          <small style="color: var(--muted);">A: Real OS processes have unpredictable future burst durations.</small></p>
+          <p style="margin-top: 0.5rem; color: var(--cyan); font-weight: 700;">Thank You! We are open to questions.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Navigation Bar -->
+  <div class="nav-bar">
+    <div class="nav-left">
+      <span>CPU Scheduling Simulator &bull; Final Project Presentation</span>
+      <span>|</span>
+      <span>Slide <strong id="slide-num">1</strong> of <strong>10</strong></span>
+    </div>
+    <div class="nav-center">
+      <button class="nav-btn" id="prev-btn">&#8592; Previous</button>
+      <button class="nav-btn primary" id="next-btn">Next &#8594;</button>
+    </div>
+    <div>
+      <button class="nav-btn" id="fullscreen-btn">Fullscreen</button>
+    </div>
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 10;
+    const slides = document.querySelectorAll('.slide');
+    const slideNumEl = document.getElementById('slide-num');
+
+    function showSlide(index) {
+      if (index < 1) index = 1;
+      if (index > totalSlides) index = totalSlides;
+      currentSlide = index;
+
+      slides.forEach(s => s.classList.remove('active'));
+      const active = document.querySelector(`.slide[data-index="${currentSlide}"]`);
+      if (active) active.classList.add('active');
+
+      slideNumEl.textContent = currentSlide;
+    }
+
+    document.getElementById('prev-btn').addEventListener('click', () => showSlide(currentSlide - 1));
+    document.getElementById('next-btn').addEventListener('click', () => showSlide(currentSlide + 1));
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        showSlide(currentSlide + 1);
+      } else if (e.key === 'ArrowLeft') {
+        showSlide(currentSlide - 1);
+      }
+    });
+
+    document.getElementById('fullscreen-btn').addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+  </script>
+</body>
+</html>
